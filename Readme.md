@@ -1,254 +1,122 @@
-# Spring Boot Security Learning Project
+# Spring Security - JDBC Authentication with PostgreSQL
 
-This project is a simple Spring Boot application created to learn and implement Spring Security step by step.
+Proyecto desarrollado con Spring Boot y Spring Security utilizando autenticación basada en JDBC contra una base de datos PostgreSQL ejecutándose en Docker.
 
-The goal is to start with a basic application and progressively add security features such as authentication, authorization, roles, custom users, and more.
+## Tecnologías
 
----
-
-## Technologies
-
-- Java 21
-- Spring Boot
+- Java 17
+- Spring Boot 3
 - Spring Security
+- Spring Data JPA
+- PostgreSQL 15
+- Docker & Docker Compose
 - Maven
-- IntelliJ IDEA
+- Lombok
 
----
+## Funcionalidades
 
-## Project Structure
+- Autenticación mediante Spring Security.
+- Implementación personalizada de `UserDetailsService`.
+- Usuarios y roles almacenados en PostgreSQL.
+- Carga de usuarios desde base de datos utilizando JDBC.
+- Configuración de autorización basada en roles.
+- Inicialización automática de esquema y datos mediante scripts SQL.
 
-```text
-src
- └── main
-     ├── java
-     │   └── com.spring.security.app_security
-     │       ├── controllers
-     │       │   ├── WelcomeController.java
-     │       │   ├── AboutUsController.java
-     │       │   ├── AccountsController.java
-     │       │   ├── BalanceController.java
-     │       │   ├── CardsController.java
-     │       │   └── LoansController.java
-     │       ├── security
-     │       │   └── SecurityConfig.java
-     │       └── AppSecurityApplication.java
-     └── resources
-         └── application.properties
-```
-
----
-
-## Available Endpoints
-
-### Public Endpoints
+## Estructura del proyecto
 
 ```text
-/welcome
-/about_us
+src/main/java/com/spring/security/app_security
+├── controllers
+├── entities
+├── repository
+└── security
+    ├── CustomerUserDetails
+    └── SecurityConfig
 ```
 
-### Protected Endpoints
+## Base de datos
 
-```text
-/accounts/**
-/balance/**
-/cards/**
-/loans/**
+La aplicación utiliza PostgreSQL ejecutándose en Docker.
+
+### Docker Compose
+
+```yaml
+services:
+  db:
+    image: postgres:15.2
+    container_name: security_bank
+    restart: always
+    environment:
+      POSTGRES_DB: security_bank
+      POSTGRES_USER: sam
+      POSTGRES_PASSWORD: 123456
+    ports:
+      - "5433:5432"
 ```
 
----
-
-# Spring Security Journey
-
-## Step 1 - Allow All Requests
-
-Initially, all requests can be accessed without authentication.
-
-```java
-.authorizeHttpRequests(auth ->
-    auth.anyRequest().permitAll()
-)
-```
-
----
-
-## Step 2 - Protect Sensitive Endpoints
-
-Require authentication for business-related resources.
-
-```java
-.authorizeHttpRequests(auth ->
-    auth
-        .requestMatchers(
-            "/accounts/**",
-            "/balance/**",
-            "/cards/**",
-            "/loans/**"
-        ).authenticated()
-)
-```
-
----
-
-## Step 3 - Keep Public Endpoints Open
-
-Allow public access to informational pages.
-
-```java
-.authorizeHttpRequests(auth ->
-    auth
-        .requestMatchers(
-            "/welcome",
-            "/about_us"
-        ).permitAll()
-)
-```
-
----
-
-## Step 4 - Enable Form Login
-
-Enable Spring Security's default login page.
-
-```java
-.formLogin(Customizer.withDefaults())
-```
-
-When an unauthenticated user attempts to access a protected resource, Spring redirects them to the login page.
-
----
-
-## Step 5 - Enable HTTP Basic Authentication
-
-Useful for testing with Postman, curl, or REST clients.
-
-```java
-.httpBasic(Customizer.withDefaults())
-```
-
-Example:
+### Levantar la base de datos
 
 ```bash
-curl -u user:password http://localhost:8080/accounts
+docker compose up -d
 ```
 
----
+Verificar:
 
-## Current Security Configuration
+```bash
+docker ps
+```
+
+## Conexión a PostgreSQL
+
+| Parámetro | Valor |
+|------------|---------|
+| Host | localhost |
+| Puerto | 5433 |
+| Base de datos | security_bank |
+| Usuario | sam |
+| Contraseña | 123456 |
+
+## Configuración de autenticación
+
+La autenticación se realiza mediante una implementación personalizada de `UserDetailsService`:
 
 ```java
-@Configuration
-public class SecurityConfig {
-
-    @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-
-        http.authorizeHttpRequests(auth -> auth
-                .requestMatchers(
-                        "/loans/**",
-                        "/balance/**",
-                        "/accounts/**",
-                        "/cards/**"
-                ).authenticated()
-                .requestMatchers(
-                        "/welcome",
-                        "/about_us"
-                ).permitAll()
-                .anyRequest().permitAll()
-        )
-        .formLogin(Customizer.withDefaults())
-        .httpBasic(Customizer.withDefaults());
-
-        return http.build();
+@Service
+public class CustomerUserDetails implements UserDetailsService {
+    @Override
+    public UserDetails loadUserByUsername(String username) {
+        ...
     }
 }
 ```
 
----
+El usuario es recuperado desde PostgreSQL a través de `CustomerRepository` y convertido a un objeto `UserDetails` de Spring Security.
 
-## Running the Application
+## Scripts SQL
 
-Using Maven Wrapper:
+Los scripts se ejecutan automáticamente al iniciar el contenedor:
 
-### Linux / macOS
+```text
+db/sql/create_schema.sql
+db/sql/data.sql
+```
+
+- `create_schema.sql`: crea las tablas.
+- `data.sql`: inserta usuarios y roles iniciales.
+
+## Ejecutar la aplicación
 
 ```bash
-./mvnw spring-boot:run
+mvn spring-boot:run
 ```
 
-### Windows
+o
 
 ```bash
-mvnw.cmd spring-boot:run
+mvn clean install
+java -jar target/app_security.jar
 ```
 
-Or simply run:
+## Autor
 
-```java
-AppSecurityApplication
-```
-
-from IntelliJ IDEA.
-
----
-
-## Testing the Application
-
-### Public Resources
-
-```text
-http://localhost:8080/welcome
-http://localhost:8080/about_us
-```
-
-### Protected Resources
-
-```text
-http://localhost:8080/accounts
-http://localhost:8080/balance
-http://localhost:8080/cards
-http://localhost:8080/loans
-```
-
-Accessing a protected endpoint without authentication will trigger Spring Security.
-
----
-
-## Default User Credentials
-
-If no custom user is configured, Spring Boot generates a temporary password at startup.
-
-Console output:
-
-```text
-Using generated security password: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx
-```
-
-Default username:
-
-```text
-user
-```
-
----
-
-# Next Steps
-
-- Create custom users
-- Configure in-memory authentication
-- Store users in a database
-- Implement password encoding
-- Create USER and ADMIN roles
-- Secure endpoints based on roles
-- Customize the login page
-- Configure logout functionality
-- Add JWT authentication
-- Build a REST API security layer
-- Integrate OAuth2 and social login
-
----
-
-## Learning Goal
-
-This project serves as a hands-on guide for understanding how Spring Security works, from basic authentication to advanced authorization mechanisms commonly used in enterprise applications.
+Samuel Garcia
