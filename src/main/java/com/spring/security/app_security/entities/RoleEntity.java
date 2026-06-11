@@ -11,11 +11,10 @@ import java.math.BigInteger;
 @Data
 public class RoleEntity implements Serializable {
 
-    //@Id
-    //@GeneratedValue(strategy = GenerationType.IDENTITY)
-    // private BigInteger id;
-
     @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private BigInteger id;
+
     @Column(name = "role_name")
     private String roleName;
     @Column(name = "description")

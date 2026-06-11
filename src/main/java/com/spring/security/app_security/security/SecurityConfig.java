@@ -27,7 +27,7 @@ import javax.sql.DataSource;
 import java.util.List;
 
 @Configuration
-@EnableMethodSecurity
+// @EnableMethodSecurity
 public class SecurityConfig {
 
     //@Autowired
@@ -47,12 +47,10 @@ public class SecurityConfig {
                      */
                     auth
                             // .requestMatchers("/loans/**", "/balance/**","/accounts/**","/cards/**")
-                            .requestMatchers("/loans/**").hasAuthority("VIEW_LOANS")
-                            .requestMatchers("/balance/**").hasAuthority("VIEW_BALANCE")
-                            .requestMatchers("/cards/**").hasAuthority("VIEW_CARDS")
-                            // .requestMatchers("/accounts/**").hasAnyAuthority("VIEW_ACCOUNT","VIEW_CARDS")
+                            .requestMatchers("/loans/**","/balance/**").hasRole("USER")
+                            .requestMatchers("/cards/**","/accounts/**").hasRole("ADMIN")
                             // .authenticated()
-                            // .requestMatchers("/welcome","/about_us").permitAll()
+                            .requestMatchers("/welcome","/about_us").permitAll()
                             .anyRequest().permitAll()
                     )
                     .formLogin(Customizer.withDefaults())
