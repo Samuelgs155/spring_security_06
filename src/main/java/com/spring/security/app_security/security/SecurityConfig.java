@@ -44,7 +44,12 @@ public class SecurityConfig {
                         .permitAll()
                      */
                     auth
-                            .requestMatchers("/loans/**", "/balance/**","/accounts/**","/cards/**").authenticated()
+                            // .requestMatchers("/loans/**", "/balance/**","/accounts/**","/cards/**")
+                            .requestMatchers("/loans/**").hasAuthority("VIEW_LOANS")
+                            .requestMatchers("/balance/**").hasAuthority("VIEW_BALANCE")
+                            .requestMatchers("/cards/**").hasAuthority("VIEW_CARDS")
+                            .requestMatchers("/accounts/**").hasAnyAuthority("VIEW_ACCOUNT","VIEW_CARDS")
+                            // .authenticated()
                             // .requestMatchers("/welcome","/about_us").permitAll()
                             .anyRequest().permitAll()
                     )
@@ -59,7 +64,7 @@ public class SecurityConfig {
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                 )
                 .addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class);
-        );
+
         return http.build();
     }
 
