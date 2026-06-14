@@ -1,12 +1,16 @@
 package com.spring.security.app_security.security;
 
+import com.spring.security.app_security.security.jwt.filter.JwtValidationFilter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.Customizer;
+import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
+import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.core.userdetails.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
@@ -35,8 +39,12 @@ public class SecurityConfig {
 
 
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
-        http.addFilterBefore(new ApiKeyFilter(), BasicAuthenticationFilter.class);
+    SecurityFilterChain securityFilterChain(HttpSecurity http,
+                                            JwtValidationFilter jwtValidationFilter) throws Exception {
+
+        http
+                .sessionManagement(sess ->
+                        sess.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
 
         var requestHandler = new CsrfTokenRequestAttributeHandler();
         requestHandler.setCsrfRequestAttributeName("_csrf");
@@ -49,20 +57,24 @@ public class SecurityConfig {
                      */
                     auth
                             // .requestMatchers("/loans/**", "/balance/**","/accounts/**","/cards/**")
-                            .requestMatchers("/loans/**","/balance/**").hasRole("USER")
+                            // .requestMatchers("/loans/**","/balance/**").hasRole("USER")
+                            .requestMatchers("/loans/**","/balance/**").hasAnyRole("USER", "ADMIN")
                             .requestMatchers("/cards/**","/accounts/**").hasRole("ADMIN")
                             // .authenticated()
-                            .requestMatchers("/welcome","/about_us").permitAll()
+                            // .requestMatchers("/welcome","/about_us").permitAll()
                             .anyRequest().permitAll()
                     )
                     .formLogin(Customizer.withDefaults())
                     .httpBasic(Customizer.withDefaults());
+
+        // jwt
+        http.addFilterAfter(jwtValidationFilter, BasicAuthenticationFilter.class);
         // http.cors(AbstractHttpConfigurer::disable);
         // http.csrf(AbstractHttpConfigurer::disable);
         http.cors(cors -> corsConfigurationSource());
         http.csrf(csrf ->
                     csrf.csrfTokenRequestHandler(requestHandler)
-                        .ignoringRequestMatchers("/welcome","/about_us")
+                        .ignoringRequestMatchers("/welcome","/about_us", "/authenticate")
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                 )
                 .addFilterAfter(new CsrfCookieFilter(), BasicAuthenticationFilter.class);
@@ -113,4 +125,13 @@ public class SecurityConfig {
         source.registerCorsConfiguration("/**", config);
         return source;
     }
-}
+
+    @Bean
+    public AuthenticationManager authenticationManager(AuthenticationConfiguration config) {
+        try {
+            return config.getAuthenticationManager();
+        } catch (Exception e) {
+            throw new RuntimeException(e);
+        }
+    }
+ }
